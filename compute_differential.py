@@ -4,6 +4,8 @@
     Date: 06/12/2020
     Reference: Deep Learning for Partial Differential Equations CS230, Kailai Xu, Bella Shi, Shuyi Yin
 '''
+import tensorflow as tf
+
 def assert_shape(x, shape):
     '''
         Assert shape of tensor (for debugging easier)
