@@ -7,11 +7,11 @@
 '''
 import numpy as np
 import tensorflow as tf
-from model import DeepLearningPDE
+from model import LaplaceZeroBoundarySolver
 import tqdm
 
-class Problem_1(DeepLearningPDE):
-    def __init__(self, d = 2, inner_hidden_layers = [128]):
+class Problem_1(LaplaceZeroBoundarySolver):
+    def __init__(self, d = 2, inner_hidden_layers = [256]):
         super(Problem_1, self).__init__(d = d, inner_hidden_layers = inner_hidden_layers)
 
     def A(self, X): # 0, or tensor
@@ -29,7 +29,34 @@ class Problem_1(DeepLearningPDE):
 
 if __name__ == '__main__':
     pb1 = Problem_1()
-    # Random data 
+
+    # Visualize data 
+    n_points = 100
+    x = np.linspace(0, 1, n_points)
+    y = np.linspace(0, 1, n_points)
+    meshgrid = np.meshgrid(x, y)
+
+    # Random Method 
     n_examples = 1000
-    X = np.random.rand(n_examples, 2)
-    pb1.train(X, batch_size = 32, epochs = 10)
+    X      = np.random.rand(n_examples, 2)
+    pb1.train(X, \
+            batch_size = 16, \
+            epochs = 50, \
+            exp_folder = 'problem1', \
+            draw_each_iter = True, \
+            vis_each_epoches = 5, \
+            meshgrid = meshgrid)
+
+    # Meshdata Method (train = subset(test))
+    n_points = 40
+    train_x = np.linspace(0, 1, n_points)
+    train_y = np.linspace(0, 1, n_points)
+    [trainX, trainY] = np.meshgrid(x, y)
+    X = np.concatenate([trainX.reshape((-1, 1)), trainY.reshape((-1, 1))], axis=1)
+    pb1.train(X, \
+            batch_size = 16, \
+            epochs = 50, \
+            exp_folder = 'problem1_grid', \
+            draw_each_iter = True, \
+            vis_each_epoches = 5, \
+            meshgrid = meshgrid)
