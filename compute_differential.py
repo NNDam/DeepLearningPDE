@@ -59,3 +59,9 @@ def compute_dy(u, xy):
     dy_u = grad[:,1]
     assert_shape(dy_u, (None,))
     return dy_u
+
+def compute_dt(u, t):
+    grad = tf.gradients(u, t)[0]
+    dt_u = grad[:,0]
+    assert_shape(dt_u, (None,))
+    return dt_u
