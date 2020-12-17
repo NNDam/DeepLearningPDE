@@ -76,7 +76,7 @@ if __name__ == '__main__':
     X = np.concatenate([trainX.reshape((-1, 1)), trainY.reshape((-1, 1))], axis=1)
     pb1.train(X, X_bound, \
             batch_size = 16, \
-            steps = 300, \
+            steps = 900, \
             exp_folder = 'problem2_grid', \
             vis_each_iters = 30, \
-            meshgrid = meshgrid)
+            meshgrid = meshgrid, train_method = 'COMBINE')

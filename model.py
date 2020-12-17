@@ -236,6 +236,8 @@ class LaplaceBoundarySolver(object):
         self.dimension   = d
         self.X           = tf.placeholder(tf.float64, (None, self.dimension))
         self.X_boundary  = tf.placeholder(tf.float64, (None, self.dimension))
+        self.boundary_hidden_layers = boundary_hidden_layers
+        self.inner_hidden_layers = inner_hidden_layers
 
         # Multi-layers perceptron model with tanh activation function
         self.model_Boundary = create_mlp_model(self.X_boundary, hidden_layers = boundary_hidden_layers, name = 'boundary')
@@ -353,153 +355,54 @@ class LaplaceBoundarySolver(object):
         ax.set_ylabel('$y$')
         fig.savefig(save_path)
 
-    # def train(self, X, X_boundary, \
-    #         batch_size = 32, \
-    #         epochs = 10, \
-    #         iters_training_boundary = 3, \
-    #         exp_folder = 'exp', \
-    #         vis_each_epoches = 20, \
-    #         meshgrid = None):
-    #     '''
-    #         Training
-    #         Input:
-    #             - iters_training_boundary: number iterations of training boundary before training inner
-    #     '''
-    #     # Create project experiment
-    #     if not os.path.exists(exp_folder):
-    #         os.mkdir(exp_folder)
-    #     # Handle data
-    #     if meshgrid is not None:
-    #         [meshX, meshY] = meshgrid
-    #         vis_points = np.concatenate([meshX.reshape((-1, 1)), meshY.reshape((-1, 1))], axis=1)
-    #     elif self.meshgrid is not None:
-    #         [meshX, meshY] = self.meshgrid
-    #         vis_points = np.concatenate([meshX.reshape((-1, 1)), meshY.reshape((-1, 1))], axis=1)
-    #     else:
-    #         vis_points = None
-    #         print('<!> Warning: visualize points not found, using training points only!')
-    #     # Counter index of boundary batch
-    #     bbatch_index = 0
-    #     # Handle data
-    #     assert len(X.shape) == 2, "Invalid input: X must be 2-dims numpy array, current shape: {}".format(X.shape)
-    #     self.total_samples, dim = X.shape
-    #     self.total_samples_boundary, dim_boundary = X_boundary.shape
-    #     assert (dim == self.dimension), "Dimension of X and model must be equal"
-    #     assert (dim_boundary == self.dimension), "Dimension of X_boundary and model must be equal"
-    #     if self.total_samples % batch_size == 0:
-    #         iter_per_epoch = self.total_samples // batch_size
-    #     else:
-    #         iter_per_epoch = self.total_samples // batch_size + 1
-    #     if self.total_samples_boundary % batch_size == 0:
-    #         iter_per_epoch_boundary = self.total_samples_boundary // batch_size
-    #     else:
-    #         iter_per_epoch_boundary = self.total_samples_boundary // batch_size + 1
-    #     # Show information
-    #     print('========================================')
-    #     print('Number training inner: {}'.format(self.total_samples))
-    #     print('Number training boundary: {}'.format(self.total_samples_boundary))
-    #     print('Dimension: {}'.format(dim))
-    #     print('Iterations per epoch: {}'.format(iter_per_epoch))
-    #     print('Experimental: {}'.format(exp_folder))
-    #     print('========================================')
-    #     for epoch in range(epochs):
-    #         X = shuffle(X)
-    #         ls_boundary = [] # Per iter, for draw fig
-    #         ls_inner = [] # Per iter, for draw fig
-    #         ls_all = [] # Per iter, for draw fig
-    #         list_l2_vis = [] # Per epoch, for print & fig
-    #         list_l2_train = [] # Per epoch, for print & fig
-            
-    #         for it in range(iter_per_epoch):
-    #             # Training boundary
-    #             tmp_boundary_loss = []
-    #             for i in range(iters_training_boundary):
-    #                 batch_boundary, is_end = self.get_batch(X_boundary, bbatch_index, batch_size = batch_size)
-
-    #                 _, boundary_loss = self.session.run([self.opt_boundary, self.loss_boundary], feed_dict={self.X_boundary: batch_boundary})
-    #                 bbatch_index += 1
-    #                 if is_end:
-    #                     X_boundary = shuffle(X_boundary)
-    #                     bbatch_index = 0
-    #                 tmp_boundary_loss.append(np.mean(boundary_loss))   
-    #             # Training inner
-    #             batch_inner, is_end = self.get_batch(X, it, batch_size = batch_size)
-    #             _, loss_inner = self.session.run([self.opt_inner, self.loss_inner], feed_dict={self.X: batch_inner})
-    #             # Get mean loss boundary
-    #             ls_boundary.append(np.mean(tmp_boundary_loss))  
-    #             # Get mean loss inner
-    #             ls_inner.append(np.mean(loss_inner))
-    #             # Get sum loss
-    #             ls_all.append(ls_boundary[-1] + ls_inner[-1])
-    #             # Get l2 train
-    #             l2_err_train = self.l2_error(X)
-    #             list_l2_train.append(l2_err_train)
-    #         avg_boundary = np.mean(ls_boundary[epoch*iter_per_epoch: (epoch+1)*iter_per_epoch])
-    #         avg_inner    = np.mean(ls_inner[epoch*iter_per_epoch: (epoch+1)*iter_per_epoch])
-    #         avg_loss = avg_boundary + avg_inner
-    #         if vis_points is not None:
-    #             # Get l2 test
-    #             l2_err_vis = self.l2_error(vis_points)
-    #             list_l2_vis.append(l2_err_vis)
-    #             print('Epoch {}/{}, Total loss: {}, Boundary loss: {}, PDE loss: {}, L2 error (train): {}, L2 error (test): {}'.format(\
-    #                 epoch+1, epochs, avg_loss, avg_boundary, avg_inner, l2_err_train, l2_err_vis))
-    #         else:
-    #             print('Epoch {}/{}, Total loss: {}, Boundary loss: {}, PDE loss: {}, L2 error (train): {}'.format(\
-    #                 epoch+1, epochs, avg_loss, avg_boundary, avg_inner, l2_err_train))
-            
-    #         if epoch > 0 and epoch % vis_each_epoches == 0:
-    #             self.visualize_surface(meshgrid = meshgrid, save_path = os.path.join(exp_folder, 'surface_{}.png'.format(epoch)))
-
-    #     # Draw loss & L2 figure
-    #     visualize_loss_error(ls_boundary, path = os.path.join(exp_folder, 'Boundary_loss.png'))
-    #     visualize_loss_error(ls_inner, path = os.path.join(exp_folder, 'PDE_loss.png'))
-    #     visualize_loss_error(ls_all, path = os.path.join(exp_folder, 'Sum_loss.png'))
-    #     visualize_loss_error(list_l2_train, path = os.path.join(exp_folder, 'L2_error_train.png'))
-    #     if vis_points is not None:
-    #         self.visualize_surface(meshgrid = meshgrid, save_path = os.path.join(exp_folder, 'surface_final.png'))
-    #         visualize_loss_error(list_l2_vis, path = os.path.join(exp_folder, 'L2_error_test.png'))
-    #         print('Best L2 = {} on epoch {}'.format(np.amin(list_l2_vis), np.argmin(list_l2_vis)))
-
-    def train(self, X, X_boundary, \
+    def train_combine(self, X, X_boundary, \
             batch_size = 32, \
             steps = 1000, \
-            iters_training_boundary = 3, \
             exp_folder = 'exp', \
             vis_each_iters = 100, \
             meshgrid = None):
         '''
-            Training
-            Input:
-                - iters_training_boundary: number iterations of training boundary before training inner
+            Training combine two loss functions
         '''
-        # Create project experiment
-        if not os.path.exists(exp_folder):
-            os.mkdir(exp_folder)
+        # Define sum of two loss functions & optimizer
+        ## Rebuild boundary loss using normal X placeholder (old: X_boundary placeholder)
+        del self.model_Boundary
+        del self.u
+        del self.loss_boundary
+        self.model_Boundary = create_mlp_model(self.X, hidden_layers = self.boundary_hidden_layers, name = 'boundary_new')
+        # Reuse model_Boundary & model_PDE to compute u_predict
+        self.u = create_mlp_model(self.X, hidden_layers = self.boundary_hidden_layers, name = 'boundary_new', reuse = True) + \
+                        self.B(self.X)*create_mlp_model(self.X, hidden_layers = self.inner_hidden_layers, name = 'inner_new', reuse = False)
+        self.loss_boundary = tf.reduce_sum((self.tf_exact_solution(self.X) - self.model_Boundary) ** 2)
+        self.loss_sumary   = self.loss_boundary + self.loss_inner
+        self.opt_sumary = tf.train.AdamOptimizer(learning_rate=0.00001).minimize(self.loss_sumary)
+        self.session.run([tf.global_variables_initializer()])
+        # Combine data
+        training_samples = np.concatenate([X, X_boundary], axis = 0)
+        training_samples = shuffle(training_samples)
+        # Visualize
         meshX, meshY = meshgrid
         vis_points = np.concatenate([meshX.reshape((-1, 1)), meshY.reshape((-1, 1))], axis=1)
+        # Training
+        ls_boundary  = []
+        ls_inner     = []
+        ls_l2        = []
+        ls_total     = []
         bbatch_index = 0
-        ls_boundary = []
-        ls_inner = []
-        ls_l2 = []
         for it in range(steps):
-            batch_boundary, is_end = self.get_batch(X_boundary, bbatch_index, batch_size = batch_size)
+            batch, is_end = self.get_batch(training_samples, bbatch_index, batch_size = batch_size)
             bbatch_index += 1
             if is_end:
-                X_boundary = shuffle(X_boundary)
+                training_samples = shuffle(training_samples)
                 bbatch_index = 0
 
-            bloss = self.session.run([self.loss_boundary], feed_dict={self.X_boundary: batch_boundary})[0]
-            # if the loss is small enough, stop training on the boundary
-            if bloss > 1e-5:
-                for _ in range(iters_training_boundary):
-                    _, bloss = self.session.run([self.opt_boundary, self.loss_boundary], feed_dict={self.X_boundary: batch_boundary})
-
-            batch_inner = self.get_random_batch(X, batch_size = batch_size)
-            _, loss = self.session.run([self.opt_inner, self.loss_inner], feed_dict={self.X: batch_inner})
-
+            _, bloss, iloss = self.session.run([self.opt_sumary, self.loss_boundary, self.loss_inner], \
+                    feed_dict={self.X: batch})
+            
             ########## record loss ############
             ls_boundary.append(bloss)
-            ls_inner.append(loss)
+            ls_inner.append(iloss)
+            ls_total.append(bloss + iloss)
             uh = self.session.run(self.u, feed_dict={self.X: vis_points})
             Z = uh.reshape((len(meshY), len(meshX)))
             uhref = self.exact_solution(vis_points)
@@ -511,8 +414,78 @@ class LaplaceBoundarySolver(object):
             
         
             if it % 10 == 0:
-                print("Iteration={}, Bounding Loss: {}, PDE Loss: {}, L2 error: {}".format(it, bloss, loss, ls_l2[-1]))
+                print("Iteration={}, Total Loss: {}, Bounding Loss: {}, PDE Loss: {}, L2 error: {}".format(\
+                        it, bloss + iloss, bloss, iloss, ls_l2[-1]))
         self.visualize_surface(meshgrid = meshgrid, save_path = os.path.join(exp_folder, 'surface_final.png'))
         visualize_loss_error(ls_l2, path = os.path.join(exp_folder, 'L2_error.png'))
         visualize_loss_error(ls_boundary, path = os.path.join(exp_folder, 'Boundary_loss.png'))
-        visualize_loss_error(ls_boundary, path = os.path.join(exp_folder, 'PDE_loss.png'))
+        visualize_loss_error(ls_inner, path = os.path.join(exp_folder, 'PDE_loss.png'))
+
+
+    def train(self, X, X_boundary, \
+            batch_size = 32, \
+            steps = 1000, \
+            iters_training_boundary = 3, \
+            exp_folder = 'exp', \
+            vis_each_iters = 100, \
+            meshgrid = None, \
+            train_method = None):
+        '''
+            Training
+            Input:
+                - iters_training_boundary: number iterations of training boundary before training inner
+        '''
+        # Create project experiment
+        assert train_method in ['COMBINE', 'SEPARATE'], "Training method should be COMBINE or SEPARATE"
+        if not os.path.exists(exp_folder):
+            os.mkdir(exp_folder)
+
+        if train_method == 'SEPARATE':
+            meshX, meshY = meshgrid
+            vis_points = np.concatenate([meshX.reshape((-1, 1)), meshY.reshape((-1, 1))], axis=1)
+            bbatch_index = 0
+            ls_boundary = []
+            ls_inner = []
+            ls_l2 = []
+            for it in range(steps):
+                batch_boundary, is_end = self.get_batch(X_boundary, bbatch_index, batch_size = batch_size)
+                bbatch_index += 1
+                if is_end:
+                    X_boundary = shuffle(X_boundary)
+                    bbatch_index = 0
+
+                bloss = self.session.run([self.loss_boundary], feed_dict={self.X_boundary: batch_boundary})[0]
+                # if the loss is small enough, stop training on the boundary
+                if bloss > 1e-5:
+                    for _ in range(iters_training_boundary):
+                        _, bloss = self.session.run([self.opt_boundary, self.loss_boundary], feed_dict={self.X_boundary: batch_boundary})
+
+                batch_inner = self.get_random_batch(X, batch_size = batch_size)
+                _, loss = self.session.run([self.opt_inner, self.loss_inner], feed_dict={self.X: batch_inner})
+
+                ########## record loss ############
+                ls_boundary.append(bloss)
+                ls_inner.append(loss)
+                uh = self.session.run(self.u, feed_dict={self.X: vis_points})
+                Z = uh.reshape((len(meshY), len(meshX)))
+                uhref = self.exact_solution(vis_points)
+                uhref = uhref.reshape((len(meshY), len(meshX)))
+                ls_l2.append(np.sqrt(np.mean((Z-uhref)**2)) )
+                ########## record loss ############
+                if it > 0 and it % vis_each_iters == 0:
+                    self.visualize_surface(meshgrid = meshgrid, save_path = os.path.join(exp_folder, 'surface_{}.png'.format(it)))
+                
+            
+                if it % 10 == 0:
+                    print("Iteration={}, Bounding Loss: {}, PDE Loss: {}, L2 error: {}".format(it, bloss, loss, ls_l2[-1]))
+            self.visualize_surface(meshgrid = meshgrid, save_path = os.path.join(exp_folder, 'surface_final.png'))
+            visualize_loss_error(ls_l2, path = os.path.join(exp_folder, 'L2_error.png'))
+            visualize_loss_error(ls_boundary, path = os.path.join(exp_folder, 'Boundary_loss.png'))
+            visualize_loss_error(ls_inner, path = os.path.join(exp_folder, 'PDE_loss.png'))
+        else:
+            self.train_combine(X, X_boundary, \
+                batch_size = batch_size, \
+                steps = steps, \
+                exp_folder = exp_folder, \
+                vis_each_iters = vis_each_iters, \
+                meshgrid = meshgrid)
