@@ -181,29 +181,16 @@ class NavierStokeSolver(object):
         X, Y = meshgrid
 
         vis_points = np.concatenate([X.reshape((-1, 1)), Y.reshape((-1, 1))], axis=1)
-        list_t     = np.ones((len(vis_points), 1))*t
-        inpX          = np.concatenate([list_t, vis_points], axis = 1)
 
-        u_predict = self.session.run(self.model_velocity_int, feed_dict={self.X: inpX})
-        Z = u_predict.reshape((len(Y), len(X), 2))
+        V = self.session.run(self.model_velocity_int, feed_dict={self.X: vis_points})
+        # Z = u_predict.reshape((len(Y), len(X), 2))
 
-        u_true = self.exact_solution(inpX)
-        u_true = u_true.reshape((len(Y), len(X)))
+        # u_true = self.exact_solution(vis_points)
+
         plt.clf()
         fig = plt.figure()
-        ax = fig.gca(projection='3d')
-        if not show_only_sol:
-            ax.plot_surface(X, Y, u_true, rstride=1, cstride=1, cmap=cm.autumn,
-                            linewidth=0, antialiased=False, alpha=0.3)
-
-        ax.plot_surface(X, Y, Z, rstride=1, cstride=1, cmap=cm.summer,
-                        linewidth=0, antialiased=False, alpha=0.8)
-        ax.set_xlim(np.amin(X), np.amax(X))
-        ax.set_ylim(np.amin(Y), np.amax(Y))
-        ax.set_zlim(np.amin(Z) - 0.1, np.amax(Z + 0.1))
-
-        ax.set_xlabel('$x$')
-        ax.set_ylabel('$y$')
+        plt.quiver(*vis_points.T, V[:,0], V[:,1], color=['r','b','g'], scale=21)
+        # plt.show()
         fig.savefig(save_path)
 
     def train_combine(self, X, X_boundary, \
@@ -256,8 +243,8 @@ class NavierStokeSolver(object):
                 l2 += np.sqrt(np.mean((uh[:, i]-uhref[:, i])**2))
             ls_l2.append(l2)
             ########## record loss ############
-            # if it > 0 and it % vis_each_iters == 0:
-            #     self.visualize_surface(meshgrid = meshgrid, save_path = os.path.join(exp_folder, 'surface_{}.png'.format(it)))
+            if it > 0 and it % vis_each_iters == 0:
+                self.visualize_surface(meshgrid = meshgrid, save_path = os.path.join(exp_folder, 'surface_{}.png'.format(it)))
             
         
             if it % 10 == 0:

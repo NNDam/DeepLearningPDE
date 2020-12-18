@@ -82,7 +82,7 @@ if __name__ == '__main__':
     [trainX, trainY] = np.meshgrid(x, y)
     X = np.concatenate([trainX.reshape((-1, 1)), trainY.reshape((-1, 1))], axis=1)
     pb1.train_combine(X, X_bound, \
-            steps = 1000, \
+            steps = 10000, \
             exp_folder = 'problem6_grid', \
             vis_each_iters = 100, \
             meshgrid = vis_meshgrid) # Recommend using SEPARATE method
