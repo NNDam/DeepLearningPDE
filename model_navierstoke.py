@@ -45,6 +45,7 @@ class NavierStokeSolver(object):
         self.X           = tf.placeholder(tf.float64, (None, self.dimension))
         self.X_boundary  = tf.placeholder(tf.float64, (None, self.dimension))
         self.X_press     = tf.placeholder(tf.float64, (None, self.dimension))
+        self.learning_rate = tf.placeholder(tf.float64)
 
         self.velocity_hidden_layers = velocity_hidden_layers
         self.pressure_hidden_layers = pressure_hidden_layers
@@ -97,10 +98,13 @@ class NavierStokeSolver(object):
         self.loss = self.loss_int + self.loss_bou + self.loss_div
         
         # Optimizer
-        self.opt = tf.train.AdamOptimizer(learning_rate=0.01).minimize(self.loss)
+        self.opt = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.loss)
         
         # Session
         self.session = tf.Session()
+
+        # Saver
+        self.saver = tf.train.Saver()
 
         # Initializer all variables
         self.session.run([tf.global_variables_initializer()])
@@ -183,22 +187,31 @@ class NavierStokeSolver(object):
         vis_points = np.concatenate([X.reshape((-1, 1)), Y.reshape((-1, 1))], axis=1)
 
         V = self.session.run(self.model_velocity_int, feed_dict={self.X: vis_points})
-        # Z = u_predict.reshape((len(Y), len(X), 2))
-
+        V = V.reshape((len(Y), len(X), 2))
+        vis_points = vis_points.reshape((len(Y), len(X), 2))
         # u_true = self.exact_solution(vis_points)
+
+        # plt.clf()
+        # fig = plt.figure()
+        # plt.quiver(*vis_points.T, V[:,0], V[:,1], color=['r','b','g'], scale=21)
+        # # plt.show()
+        # fig.savefig(save_path)
 
         plt.clf()
         fig = plt.figure()
-        plt.quiver(*vis_points.T, V[:,0], V[:,1], color=['r','b','g'], scale=21)
-        # plt.show()
-        fig.savefig(save_path)
-
+        # Varying color along a streamline
+        strm = plt.streamplot(vis_points[:, :, 0], vis_points[:, :, 1], V[:, :, 0], V[:, :, 1], color=V[:, :, 0], linewidth=2, cmap='autumn')
+        fig.colorbar(strm.lines)
+        fig.savefig(save_path.split('.')[0] + '_streamplot.png')        
+        
     def train_combine(self, X, X_boundary, \
             steps = 1000, \
             exp_folder = 'exp', \
             vis_each_iters = 100, \
             meshgrid = None, \
-            timespace = None):
+            timespace = None, \
+            lr_init = 0.01, \
+            lr_scheduler = [4000, 6000, 8000]):
         '''
             Training combine 3 loss functions
         '''
@@ -214,7 +227,10 @@ class NavierStokeSolver(object):
         ls_l2        = []
         ls_total     = []
         bbatch_index = 0
+        lr = lr_init
         for it in range(steps):
+            if it in lr_scheduler:
+                lr = lr / 10
             _batch, _batch_bou, _fxy, _u1, _u2, is_end = self.get_batch(X, X_boundary, bbatch_index, batch_size = self.batch_size)
             bbatch_index += 1
 
@@ -228,7 +244,8 @@ class NavierStokeSolver(object):
                                 self.sol_bou_y: _u2.reshape((self.batch_size, 1)), \
                                 self.X: _batch, \
                                 self.X_boundary: _batch_bou, \
-                                self.X_press: _batch})
+                                self.X_press: _batch, \
+                                self.learning_rate: lr})
             
             ########## record loss ############
             ls_int.append(np.mean(np.squeeze(iloss)))
@@ -256,4 +273,4 @@ class NavierStokeSolver(object):
         visualize_loss_error(ls_div, path = os.path.join(exp_folder, 'Loss_div.png'), y_name = 'Loss div')
         visualize_loss_error(ls_total, path = os.path.join(exp_folder, 'Loss_total.png'), y_name = 'Loss total')
         visualize_loss_error(ls_l2, path = os.path.join(exp_folder, 'L2_Error.png'), y_name = 'L2 error')
-
+        self.saver.save(self.session, os.path.join(exp_folder, 'model.ckpt'))

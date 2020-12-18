@@ -21,7 +21,7 @@ from compute_differential import assert_shape, compute_delta_nd, compute_dt
 from visualize import visualize_f
 
 class Problem_6(NavierStokeSolver):
-    def __init__(self, d= 2, velocity_hidden_layers = [10, 10, 10, 10], pressure_hidden_layers = [10, 10, 10, 10], batch_size = 32):
+    def __init__(self, d= 2, velocity_hidden_layers = [16, 16, 16, 16], pressure_hidden_layers = [16, 16, 16, 16], batch_size = 32):
         super(Problem_6, self).__init__(d = d, velocity_hidden_layers = velocity_hidden_layers, pressure_hidden_layers = pressure_hidden_layers, batch_size = batch_size)
         self.v = 0.025
         self.lamb = 1/(2*self.v) - np.sqrt(1/(4*self.v*self.v) + 4*np.pi*np.pi)
@@ -50,7 +50,7 @@ if __name__ == '__main__':
     pb1 = Problem_6()
 
     # Visualize data 
-    n_points = 50
+    n_points = 100
     x = np.linspace(-0.5, 1.0, n_points)
     y = np.linspace(-0.5, 1.5, n_points)
     vis_meshgrid = np.meshgrid(x, y)
@@ -76,13 +76,15 @@ if __name__ == '__main__':
     # Concatenate
     X_bound = np.concatenate([tmp0, tmp1, tmp2, tmp3], axis = 0)
     t_bound = np.random.rand(len(X_bound), 1)
-    n_points = 40
+    n_points = 80
     x = np.linspace(-0.5, 1.0, n_points)
     y = np.linspace(-0.5, 1.5, n_points)
     [trainX, trainY] = np.meshgrid(x, y)
     X = np.concatenate([trainX.reshape((-1, 1)), trainY.reshape((-1, 1))], axis=1)
     pb1.train_combine(X, X_bound, \
-            steps = 10000, \
+            steps = 1000, \
             exp_folder = 'problem6_grid', \
             vis_each_iters = 100, \
-            meshgrid = vis_meshgrid) # Recommend using SEPARATE method
+            meshgrid = vis_meshgrid, \
+            lr_init = 0.01, \
+            lr_scheduler = [4000, 6000, 8000]) # Recommend using SEPARATE method

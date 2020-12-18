@@ -45,6 +45,7 @@ class HeatEquationSolver(object):
         self.dimension   = d
         self.X           = tf.placeholder(tf.float64, (None, self.dimension + 1))
         self.X_boundary  = tf.placeholder(tf.float64, (None, self.dimension + 1))
+        self.learning_rate  = tf.placeholder(tf.float64)
         self.boundary_hidden_layers = boundary_hidden_layers
         self.inner_hidden_layers = inner_hidden_layers
 
@@ -62,9 +63,9 @@ class HeatEquationSolver(object):
         
         # Optimizer
         var_list_boundary = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, "boundary")
-        self.opt_boundary = tf.train.AdamOptimizer(learning_rate=0.01).minimize(self.loss_boundary, var_list=var_list_boundary)
+        self.opt_boundary = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.loss_boundary, var_list=var_list_boundary)
         var_list_inner    = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, "inner")
-        self.opt_inner    = tf.train.AdamOptimizer(learning_rate=0.01).minimize(self.loss_inner, var_list=var_list_inner)
+        self.opt_inner    = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.loss_inner, var_list=var_list_inner)
         
         # Session
         self.session = tf.Session()
@@ -72,6 +73,9 @@ class HeatEquationSolver(object):
         # Initializer all variables
         self.session.run([tf.global_variables_initializer()])
         
+        # Saver
+        self.saver = tf.train.Saver()
+
     def B(self, X, t):
         raise NotImplementedError
 
@@ -176,7 +180,9 @@ class HeatEquationSolver(object):
             exp_folder = 'exp', \
             vis_each_iters = 100, \
             meshgrid = None, \
-            timespace = None):
+            timespace = None, \
+            lr_init = 0.01, \
+            lr_scheduler = [4000, 6000, 8000]):
         '''
             Training combine two loss functions
         '''
@@ -189,7 +195,8 @@ class HeatEquationSolver(object):
                         self.B(self.X)*create_mlp_model(self.X, hidden_layers = self.inner_hidden_layers, name = 'inner_new', reuse = False)
         self.loss_boundary = tf.reduce_sum((self.tf_exact_solution(self.X) - self.model_Boundary) ** 2)
         self.loss_sumary   = self.loss_boundary + self.loss_inner
-        self.opt_sumary = tf.train.AdamOptimizer(learning_rate=0.01).minimize(self.loss_sumary)
+
+        self.opt_sumary = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.loss_sumary)
         self.session.run([tf.global_variables_initializer()])
         # Combine data
         training_samples = np.concatenate([X, X_boundary], axis = 0)
@@ -206,21 +213,24 @@ class HeatEquationSolver(object):
         ls_l2        = []
         ls_total     = []
         bbatch_index = 0
+        lr = lr_init
         for it in range(steps):
+            if it in lr_scheduler:
+                lr = lr / 10
             batch, is_end = self.get_batch(training_samples, bbatch_index, batch_size = batch_size)
             bbatch_index += 1
             if is_end:
                 training_samples = shuffle(training_samples)
                 bbatch_index = 0
             _, bloss, iloss = self.session.run([self.opt_sumary, self.loss_boundary, self.loss_inner], \
-                    feed_dict={self.X: batch})
+                    feed_dict={self.X: batch, self.learning_rate: lr})
             
             ########## record loss ############
             ls_boundary.append(bloss)
             ls_inner.append(iloss)
             ls_total.append(bloss + iloss)
 
-            uh = self.session.run(self.u, feed_dict={self.X: all_points})
+            uh = self.session.run(self.u, feed_dict={self.X: all_points, self.learning_rate: lr})
             uhref = self.exact_solution(all_points)
             ls_l2.append(np.sqrt(np.mean((uh-uhref)**2)))
             ########## record loss ############
@@ -232,10 +242,10 @@ class HeatEquationSolver(object):
                 print("Iteration={}, Total Loss: {}, Bounding Loss: {}, PDE Loss: {}, L2 error: {}".format(\
                         it, bloss + iloss, bloss, iloss, ls_l2[-1]))
         self.visualize_surface(t = 1, meshgrid = meshgrid, save_path = os.path.join(exp_folder, 'surface_final.png'))
-        visualize_loss_error(ls_l2, path = os.path.join(exp_folder, 'L2_error.png'))
-        visualize_loss_error(ls_boundary, path = os.path.join(exp_folder, 'Boundary_loss.png'))
-        visualize_loss_error(ls_inner, path = os.path.join(exp_folder, 'PDE_loss.png'))
-
+        visualize_loss_error(ls_l2, path = os.path.join(exp_folder, 'L2_error.png'), y_name = 'L2 error')
+        visualize_loss_error(ls_boundary, path = os.path.join(exp_folder, 'Boundary_loss.png'), y_name = 'Loss boundary')
+        visualize_loss_error(ls_inner, path = os.path.join(exp_folder, 'PDE_loss.png'), y_name = 'Loss PDE')
+        self.saver.save(self.session, os.path.join(exp_folder, 'model.ckpt'))
 
     def train(self, X, X_boundary, \
             batch_size = 32, \
@@ -245,7 +255,9 @@ class HeatEquationSolver(object):
             vis_each_iters = 100, \
             meshgrid = None, \
             train_method = None, \
-            timespace = None):
+            timespace = None, \
+            lr_init = 0.01, \
+            lr_scheduler = [4000, 6000, 8000]):
         '''
             Training
             Input:
@@ -259,6 +271,7 @@ class HeatEquationSolver(object):
         print(X.shape, X_boundary.shape)
         if train_method == 'SEPARATE':
             # Create list of point for calculate L2
+            lr = lr_init
             meshX, meshY = meshgrid
             vis_points = np.concatenate([meshX.reshape((-1, 1)), meshY.reshape((-1, 1))], axis=1)
             all_points = np.tile(vis_points, (len(timespace), 1))
@@ -269,21 +282,23 @@ class HeatEquationSolver(object):
             ls_inner = []
             ls_l2 = []
             for it in range(steps):
+                if it in lr_scheduler:
+                    lr = lr / 10
                 batch_boundary, is_end = self.get_batch(X_boundary, bbatch_index, batch_size = batch_size)
                 bbatch_index += 1
                 if is_end:
                     X_boundary = shuffle(X_boundary)
                     bbatch_index = 0
                 bloss = self.session.run([self.loss_boundary], \
-                    feed_dict={self.X_boundary: batch_boundary})[0]
+                    feed_dict={self.X_boundary: batch_boundary, self.learning_rate: lr})[0]
                 # if the loss is small enough, stop training on the boundary
                 if bloss > 1e-3:
                     for _ in range(iters_training_boundary):
                         _, bloss = self.session.run([self.opt_boundary, self.loss_boundary], \
-                            feed_dict={self.X_boundary: batch_boundary})
+                            feed_dict={self.X_boundary: batch_boundary, self.learning_rate: lr})
 
                 batch_inner = self.get_random_batch(X, batch_size = batch_size)
-                _, loss = self.session.run([self.opt_inner, self.loss_inner], feed_dict={self.X: batch_inner})
+                _, loss = self.session.run([self.opt_inner, self.loss_inner], feed_dict={self.X: batch_inner, self.learning_rate: lr})
 
                 ########## record loss ############
                 ls_boundary.append(bloss)
@@ -300,9 +315,10 @@ class HeatEquationSolver(object):
                 if it % 10 == 0:
                     print("Iteration={}, Bounding Loss: {}, PDE Loss: {}, L2 error: {}".format(it, bloss, loss, ls_l2[-1]))
             # self.visualize_surface(meshgrid = meshgrid, save_path = os.path.join(exp_folder, 'surface_final.png'))
-            visualize_loss_error(ls_l2, path = os.path.join(exp_folder, 'L2_error.png'))
-            visualize_loss_error(ls_boundary, path = os.path.join(exp_folder, 'Boundary_loss.png'))
-            visualize_loss_error(ls_inner, path = os.path.join(exp_folder, 'PDE_loss.png'))
+            visualize_loss_error(ls_l2, path = os.path.join(exp_folder, 'L2_error.png'), y_name = 'L2 error')
+            visualize_loss_error(ls_boundary, path = os.path.join(exp_folder, 'Boundary_loss.png'), y_name = 'Loss boundary')
+            visualize_loss_error(ls_inner, path = os.path.join(exp_folder, 'PDE_loss.png'), y_name = 'Loss inner')
+            self.saver.save(self.session, os.path.join(exp_folder, 'model.ckpt'))
         else:
             self.train_combine(X, X_boundary, \
                 batch_size = batch_size, \
@@ -310,4 +326,6 @@ class HeatEquationSolver(object):
                 exp_folder = exp_folder, \
                 vis_each_iters = vis_each_iters, \
                 meshgrid = meshgrid, \
-                timespace = timespace)
+                timespace = timespace, \
+                lr_init = lr_init, \
+                lr_scheduler = lr_scheduler)

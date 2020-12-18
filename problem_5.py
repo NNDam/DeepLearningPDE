@@ -78,4 +78,8 @@ if __name__ == '__main__':
             steps = 10000, \
             exp_folder = 'problem5_grid', \
             vis_each_iters = 100, \
-            meshgrid = meshgrid, train_method = 'COMBINE', timespace = timespace) # Recommend using SEPARATE method
+            meshgrid = meshgrid, \
+            train_method = 'COMBINE', \
+            timespace = timespace, \
+            lr_init = 0.01, \
+            lr_scheduler = [4000, 6000, 8000]) # Recommend using SEPARATE method
