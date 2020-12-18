@@ -3,17 +3,26 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import cm
 
-def visualize_loss_error(list_losses, logarit = True, path = 'loss.png'):
+def visualize_loss_error(list_losses, path = 'loss.png', x_name = 'iter', y_name = 'loss'):
     '''
         Visualize loss & error
     '''
     plt.clf()
     list_losses = np.array(list_losses)
-    if logarit:
-        list_losses = np.log(list_losses)
     Xbar = np.arange(len(list_losses))
     plt.plot(Xbar, list_losses)
+    plt.xlabel(x_name)
+    plt.ylabel(y_name)
     plt.savefig(path)
+
+    plt.clf()
+    list_losses = np.array(list_losses)
+    list_losses = np.log(list_losses)
+    Xbar = np.arange(len(list_losses))
+    plt.plot(Xbar, list_losses)
+    plt.xlabel(x_name)
+    plt.ylabel(y_name)
+    plt.savefig(path.split('.')[0] + '_log.png')
 
 
 def visualize_f(meshgrid, func, save_path):
