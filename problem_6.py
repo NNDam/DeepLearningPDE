@@ -21,7 +21,7 @@ from compute_differential import assert_shape, compute_delta_nd, compute_dt
 from visualize import visualize_f
 
 class Problem_6(NavierStokeSolver):
-    def __init__(self, d= 2, velocity_hidden_layers = [16, 16, 16, 16], pressure_hidden_layers = [16, 16, 16, 16], batch_size = 32):
+    def __init__(self, d= 2, velocity_hidden_layers = [32, 32, 32, 32], pressure_hidden_layers = [32, 32, 32, 32], batch_size = 128*4):
         super(Problem_6, self).__init__(d = d, velocity_hidden_layers = velocity_hidden_layers, pressure_hidden_layers = pressure_hidden_layers, batch_size = batch_size)
         self.v = 0.025
         self.lamb = 1/(2*self.v) - np.sqrt(1/(4*self.v*self.v) + 4*np.pi*np.pi)
@@ -58,20 +58,20 @@ if __name__ == '__main__':
 
     # Training data
     # Template <x, -0.5>
-    tmp00   = np.random.rand(100, 1) * (1.0 - -0.5) + (-0.5)
-    tmp01   = np.ones((100, 1))*-0.5
+    tmp00   = np.random.rand(128, 1) * (1.0 - -0.5) + (-0.5)
+    tmp01   = np.ones((128, 1))*-0.5
     tmp0    = np.concatenate([tmp00, tmp01], axis = 1)
     # Template <x, 1.5>
-    tmp10   = np.random.rand(100, 1) * (1.0 - -0.5) + (-0.5)
-    tmp11   = np.ones((100, 1))*1.5
+    tmp10   = np.random.rand(128, 1) * (1.0 - -0.5) + (-0.5)
+    tmp11   = np.ones((128, 1))*1.5
     tmp1    = np.concatenate([tmp10, tmp11], axis = 1)
     # Template <-0.5, y>
-    tmp20   = np.ones((100, 1))*(-0.5)
-    tmp21   = np.random.rand(100, 1) * (1.5 - -0.5) + (-0.5)
+    tmp20   = np.ones((128, 1))*(-0.5)
+    tmp21   = np.random.rand(128, 1) * (1.5 - -0.5) + (-0.5)
     tmp2    = np.concatenate([tmp20, tmp21], axis = 1)
     # Template <1.0, y>
-    tmp30   = np.ones((100, 1))
-    tmp31   = np.random.rand(100, 1) * (1.5 - -0.5) + (-0.5)
+    tmp30   = np.ones((128, 1))
+    tmp31   = np.random.rand(128, 1) * (1.5 - -0.5) + (-0.5)
     tmp3    = np.concatenate([tmp30, tmp31], axis = 1)
     # Concatenate
     X_bound = np.concatenate([tmp0, tmp1, tmp2, tmp3], axis = 0)
@@ -82,9 +82,9 @@ if __name__ == '__main__':
     [trainX, trainY] = np.meshgrid(x, y)
     X = np.concatenate([trainX.reshape((-1, 1)), trainY.reshape((-1, 1))], axis=1)
     pb1.train_combine(X, X_bound, \
-            steps = 1000, \
+            steps = 12000, \
             exp_folder = 'problem6_grid', \
             vis_each_iters = 100, \
             meshgrid = vis_meshgrid, \
             lr_init = 0.01, \
-            lr_scheduler = [4000, 6000, 8000]) # Recommend using SEPARATE method
+            lr_scheduler = [4000, 6000, 8000, 10000]) # Recommend using SEPARATE method

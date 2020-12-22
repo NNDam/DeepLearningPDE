@@ -90,11 +90,11 @@ class NavierStokeSolver(object):
         advection_y = v_x*vel_x + v_y*vel_y
 
         # Loss
-        self.loss_int = tf.square(-advection_x+nu*(u_xx+u_yy)+self.sol_int_x-p_x) + tf.square(-advection_y+nu*(v_xx+v_yy)+self.sol_int_y-p_y)
-        self.loss_div = tf.square(u_x+v_y)
+        self.loss_int = tf.reduce_mean(tf.square(-advection_x+nu*(u_xx+u_yy)+self.sol_int_x-p_x) + tf.square(-advection_y+nu*(v_xx+v_yy)+self.sol_int_y-p_y))
+        self.loss_div = tf.reduce_mean(tf.square(u_x+v_y))
         loss_bou_x = tf.square(vel_bou_x-self.sol_bou_x)
         loss_bou_y = tf.square(vel_bou_y-self.sol_bou_y)
-        self.loss_bou = loss_bou_x + loss_bou_y
+        self.loss_bou = tf.reduce_mean(loss_bou_x + loss_bou_y)
         self.loss = self.loss_int + self.loss_bou + self.loss_div
         
         # Optimizer
@@ -218,6 +218,7 @@ class NavierStokeSolver(object):
         if not os.path.exists(exp_folder):
             os.mkdir(exp_folder)
         # Visualize
+        print(X.shape, X_boundary.shape)
         meshX, meshY = meshgrid
         vis_points = np.concatenate([meshX.reshape((-1, 1)), meshY.reshape((-1, 1))], axis=1)
         # Training

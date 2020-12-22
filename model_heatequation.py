@@ -45,6 +45,7 @@ class HeatEquationSolver(object):
         self.dimension   = d
         self.X           = tf.placeholder(tf.float64, (None, self.dimension + 1))
         self.X_boundary  = tf.placeholder(tf.float64, (None, self.dimension + 1))
+        self.X0         = tf.placeholder(tf.float64, (None, self.dimension + 1))
         self.learning_rate  = tf.placeholder(tf.float64)
         self.boundary_hidden_layers = boundary_hidden_layers
         self.inner_hidden_layers = inner_hidden_layers
@@ -56,10 +57,12 @@ class HeatEquationSolver(object):
         # Reuse model_Boundary & model_PDE to compute u_predict
         self.u = create_mlp_model(self.X, hidden_layers = boundary_hidden_layers, name = 'boundary', reuse = True) + \
                         self.B(self.X)*create_mlp_model(self.X, hidden_layers = inner_hidden_layers, name = 'inner', reuse = False)
-        
+        self.ut0 = create_mlp_model(self.X0, hidden_layers = boundary_hidden_layers, name = 'boundary', reuse = True) + \
+                        self.B(self.X0)*create_mlp_model(self.X0, hidden_layers = inner_hidden_layers, name = 'inner', reuse = True)
         # Loss
         self.loss_boundary = self.compute_boundary_loss()
         self.loss_inner    = self.compute_inner_loss()
+        self.loss_u0       = tf.reduce_sum((self.ut0 - self.u0(self.X0)) ** 2)
         
         # Optimizer
         var_list_boundary = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, "boundary")
@@ -181,7 +184,7 @@ class HeatEquationSolver(object):
             vis_each_iters = 100, \
             meshgrid = None, \
             timespace = None, \
-            lr_init = 0.01, \
+            lr_init = 0.1, \
             lr_scheduler = [4000, 6000, 8000]):
         '''
             Training combine two loss functions
@@ -193,8 +196,12 @@ class HeatEquationSolver(object):
         # Reuse model_Boundary & model_PDE to compute u_predict
         self.u = create_mlp_model(self.X, hidden_layers = self.boundary_hidden_layers, name = 'boundary_new', reuse = True) + \
                         self.B(self.X)*create_mlp_model(self.X, hidden_layers = self.inner_hidden_layers, name = 'inner_new', reuse = False)
+        self.ut0 = create_mlp_model(self.X0, hidden_layers = self.boundary_hidden_layers, name = 'boundary_new', reuse = True) + \
+                        self.B(self.X0)*create_mlp_model(self.X0, hidden_layers = self.inner_hidden_layers, name = 'inner_new', reuse = True)
         self.loss_boundary = tf.reduce_sum((self.tf_exact_solution(self.X) - self.model_Boundary) ** 2)
-        self.loss_sumary   = self.loss_boundary + self.loss_inner
+        self.loss_u0       = tf.reduce_sum((self.ut0 - self.u0(self.X0)) ** 2)
+        self.loss_inner    = tf.reduce_sum(self.compute_inner_loss())
+        self.loss_sumary   = self.loss_boundary + self.loss_inner + self.loss_u0
 
         self.opt_sumary = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.loss_sumary)
         self.session.run([tf.global_variables_initializer()])
@@ -219,11 +226,13 @@ class HeatEquationSolver(object):
                 lr = lr / 10
             batch, is_end = self.get_batch(training_samples, bbatch_index, batch_size = batch_size)
             bbatch_index += 1
+            batch_u0 = batch.copy()
+            batch_u0[:, 0] = 0.
             if is_end:
                 training_samples = shuffle(training_samples)
                 bbatch_index = 0
             _, bloss, iloss = self.session.run([self.opt_sumary, self.loss_boundary, self.loss_inner], \
-                    feed_dict={self.X: batch, self.learning_rate: lr})
+                    feed_dict={self.X: batch, self.learning_rate: lr, self.X0: batch_u0})
             
             ########## record loss ############
             ls_boundary.append(bloss)
