@@ -18,7 +18,7 @@ def func(X):
     return np.exp(-1000*((X[:, 0] - 0.5)**2 + (X[:, 1] - 0.5)**2))
 
 class Problem_5(HeatEquationSolver):
-    def __init__(self, d= 2, inner_hidden_layers = [10, 10, 10, 10], hidden_layers = [32, 32, 32, 32]):
+    def __init__(self, d= 2, inner_hidden_layers = [10, 10, 10, 10], hidden_layers = [128, 128, 128]):
         super(Problem_5, self).__init__(d = d, inner_hidden_layers = inner_hidden_layers, hidden_layers = hidden_layers)
 
     def f(self, X): # Must be tensor, not numpy
@@ -68,13 +68,16 @@ if __name__ == '__main__':
     n_points = 60
     train_x = np.linspace(0, 1, n_points)
     train_y = np.linspace(0, 1, n_points)
-    [trainX, trainY] = np.meshgrid(x, y)
+    [trainX, trainY] = np.meshgrid(train_x, train_y)
     X = np.concatenate([trainX.reshape((-1, 1)), trainY.reshape((-1, 1))], axis=1)
-    t = np.random.rand(len(X), 1)
-    pb1.train_combine(np.concatenate([t, X], axis = 1), np.concatenate([t_bound, X_bound], axis = 1), \
+    # t = np.random.rand(len(X), 1)
+    t = np.linspace(0, 1.0, 4)
+    X_tile = np.tile(X, (4, 1))
+    t_tile = np.repeat(t, len(X), 0).reshape((-1, 1))
+    pb1.train_combine(np.concatenate([t_tile, X_tile], axis = 1), np.concatenate([t_bound, X_bound], axis = 1), \
             batch_size = 128*4, \
             steps = 10000, \
-            exp_folder = 'problem5_prelu', \
+            exp_folder = 'problem5_grid', \
             vis_each_iters = 100, \
             meshgrid = meshgrid, \
             timespace = timespace, \

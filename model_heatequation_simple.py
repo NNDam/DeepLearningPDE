@@ -39,8 +39,8 @@ def create_mlp_model(X, hidden_layers: list, name: str, reuse = False, prelu_act
                 X = tf.layers.dense(X, layer_nodes, activation=None, name="dense{}".format(layer_id), reuse=reuse)
                 X = prelu(X, name = 'prelu{}'.format(layer_id), reuse = reuse)
         X = tf.layers.dense(X, 1, activation=None, name="last", reuse=reuse)
-        X = tf.squeeze(X, axis=1)
-        assert_shape(X, (None,))
+        # X = tf.squeeze(X, axis=1)
+        # assert_shape(X, (None,))
     return X
 
 class HeatEquationSolver(object):
@@ -185,10 +185,11 @@ class HeatEquationSolver(object):
         # training_samples = shuffle(training_samples)
         # Visualize
         meshX, meshY = meshgrid
-        vis_points = np.concatenate([meshX.reshape((-1, 1)), meshY.reshape((-1, 1))], axis=1)
-        all_points = np.tile(vis_points, (len(timespace), 1))
-        all_t      = np.repeat(timespace, len(vis_points), 0).reshape((-1, 1))
-        all_points = np.concatenate([all_t, all_points], axis = 1)
+        # vis_points = np.concatenate([meshX.reshape((-1, 1)), meshY.reshape((-1, 1))], axis=1)
+        # all_points = np.tile(vis_points, (len(timespace), 1))
+        # all_t      = np.repeat(timespace, len(vis_points), 0).reshape((-1, 1))
+        all_t = np.ones((len(meshX.reshape((-1, 1))), 1))
+        all_points = np.concatenate([all_t, meshX.reshape((-1, 1)), meshY.reshape((-1, 1))], axis=1)
         # Training
         ls_boundary  = []
         ls_inner     = []
@@ -200,16 +201,14 @@ class HeatEquationSolver(object):
             if it in lr_scheduler:
                 lr = lr / 10
             batch = self.get_random_batch(X, batch_size = batch_size)
-            # bbatch_index += 1
             batch_u0 = batch.copy()
             batch_u0[:, 0] = 0.
             batch_bound = self.get_random_batch(X_boundary, batch_size = batch_size)
-            # print(batch[:4])
-            # print(batch_bound[:4])
-            # print(batch_u0[:4])
-            # if is_end:
-            #     training_samples = shuffle(training_samples)
-            #     bbatch_index = 0
+            # batch    = np.random.rand(batch_size, 3)
+            # batch_u0 = np.random.rand(batch_size, 3)
+            # batch_u0[:, 0] = 0.
+            # batch_bound = self.get_random_batch(X_boundary, batch_size = batch_size)
+            
             _, bloss, iloss = self.session.run([self.opt_sumary, self.loss_boundary, self.loss_inner], \
                     feed_dict={self.X: batch, self.learning_rate: lr, self.Xt0: batch_u0, self.X_boundary: batch_bound})
             
@@ -218,8 +217,10 @@ class HeatEquationSolver(object):
             ls_inner.append(iloss)
             ls_total.append(bloss + iloss)
 
-            uh = self.session.run(self.u, feed_dict={self.X: all_points, self.learning_rate: lr})
+            uh = np.squeeze(self.session.run(self.u, feed_dict={self.X: all_points}))
             uhref = self.exact_solution(all_points)
+            # uh = np.squeeze(self.session.run(self.u, feed_dict={self.X: batch}))
+            # uhref = self.exact_solution(batch)
             ls_l2.append(np.sqrt(np.mean((uh-uhref)**2)))
             ########## record loss ############
             if it > 0 and it % vis_each_iters == 0:
