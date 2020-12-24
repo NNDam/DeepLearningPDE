@@ -12,8 +12,8 @@ def visualize_loss_error(list_losses, path = 'loss.png', x_name = 'iter', y_name
     Xbar = np.arange(len(list_losses))
     fig, ax = plt.subplots() 
     ax.plot(Xbar, list_losses)
-    ax.xlabel(x_name)
-    ax.ylabel(y_name)
+    plt.xlabel(x_name)
+    plt.ylabel(y_name)
     plt.savefig(path)
 
     plt.clf()
@@ -21,8 +21,8 @@ def visualize_loss_error(list_losses, path = 'loss.png', x_name = 'iter', y_name
     Xbar = np.arange(len(list_losses))
     fig, ax = plt.subplots() 
     ax.plot(Xbar, list_losses)
-    ax.xlabel(x_name)
-    ax.ylabel(y_name)
+    plt.xlabel(x_name)
+    plt.ylabel(y_name)
     ax.set_yscale('log')
     plt.savefig(path.split('.')[0] + '_log.png')
 
