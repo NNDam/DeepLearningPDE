@@ -8,9 +8,9 @@ Deep Learning for Partial Differential Equations
 python problem_Laplace.py
 ```
 <p align="center">
-  <img src="problem_laplace/L2_error_test.png" width="300">
-  <img src="problem_laplace/PDE_loss.png" width="300">
-  <img src="problem_laplace/surface_final.png" width="300">
+  <img src="problem_laplace/L2_error_test.png" width="250">
+  <img src="problem_laplace/PDE_loss.png" width="250">
+  <img src="problem_laplace/surface_final.png" width="250">
 </p>
 
 ## 2. Heat Equation
@@ -18,9 +18,9 @@ python problem_Laplace.py
 python problem_HeatEquation.py
 ```
 <p align="center">
-  <img src="problem_heatequation/surface_100.png" width="300">
-  <img src="problem_heatequation/surface_1000.png" width="300">
-  <img src="problem_heatequation/surface_3000.png" width="300">
+  <img src="problem_heatequation/surface_100.png" width="250">
+  <img src="problem_heatequation/surface_1000.png" width="250">
+  <img src="problem_heatequation/surface_3000.png" width="250">
 </p>
 
 ## 3. Steady Navier Stoke Equation
@@ -28,9 +28,9 @@ python problem_HeatEquation.py
 python problem_steadyNavierStoke.py
 ```
 <p align="center">
-  <img src="problem_steadyNavierStoke/Loss_total_log.png" width="300">
-  <img src="problem_steadyNavierStoke/L2_Error_log.png" width="300">
-  <img src="problem_steadyNavierStoke/surface_11900_streamplot.png" width="300">
+  <img src="problem_steadyNavierStoke/Loss_total_log.png" width="250">
+  <img src="problem_steadyNavierStoke/L2_Error_log.png" width="250">
+  <img src="problem_steadyNavierStoke/surface_11900_streamplot.png" width="250">
 </p>
 
 ## 4. Navier Stoke Parameters Estimation
@@ -38,9 +38,9 @@ python problem_steadyNavierStoke.py
 python problem_NavierStokeEstimation.py
 ```
 <p align="center">
-  <img src="problem_estimation/loss_log.png" width="300">
-  <img src="problem_estimation/solution_xp.png" width="300">
-  <img src="problem_estimation/solution_xp_true.png" width="300">
+  <img src="problem_estimation/loss_log.png" width="250">
+  <img src="problem_estimation/solution_xp.png" width="250">
+  <img src="problem_estimation/solution_xp_true.png" width="250">
 </p>
 
 
