@@ -3,6 +3,9 @@ Deep Learning for Partial Differential Equations
 - [x] Training & testing with different meshgrids
 - [x] Adam optimizer + Learning rate scheduler (L-BFGS is better)
 - [x] Refinement 
+### Requirements
+- tensorflow < 2.0
+- scipy, numpy, matplotlib
 ## 1. Laplace equation with zero boundary
 ```python
 python problem_Laplace.py
