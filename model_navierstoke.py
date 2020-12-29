@@ -13,7 +13,6 @@ from compute_differential import assert_shape, compute_delta_nd, compute_dt
 from sklearn.utils import shuffle
 from mpl_toolkits.mplot3d import Axes3D
 from visualize import visualize_loss_error
-from model import create_mlp_model
 
 def create_mlp_model(X, out_shape, hidden_layers: list, name: str, reuse = False):
     '''
@@ -23,8 +22,6 @@ def create_mlp_model(X, out_shape, hidden_layers: list, name: str, reuse = False
         for layer_id, layer_nodes in enumerate(hidden_layers):
             X = tf.layers.dense(X, layer_nodes, activation=tf.nn.tanh, name="dense{}".format(layer_id), reuse=reuse)
         X = tf.layers.dense(X, out_shape, activation=None, name="last", reuse=reuse)
-        # X = tf.squeeze(X, axis=1)
-        # assert_shape(X, (None,))
     return X
 
 class NavierStokeSolver(object):
@@ -54,8 +51,7 @@ class NavierStokeSolver(object):
         self.model_velocity_int = create_mlp_model(self.X, out_shape = 2, hidden_layers = velocity_hidden_layers, name = 'velocity')
         self.model_velocity_bou = create_mlp_model(self.X_boundary, out_shape = 2, hidden_layers = velocity_hidden_layers, name = 'velocity', reuse = True)
         self.model_pressure_int = create_mlp_model(self.X_press, out_shape = 1, hidden_layers = pressure_hidden_layers, name = 'pressure')
-        # self.model_PDE      = create_mlp_model(self.X, hidden_layers = inner_hidden_layers, name = 'inner')
-    
+
         # Gradient
         grad      = self.first_derivatives_nn_velocity(self.X, self.batch_size)
         grad_grad = self.second_derivatives_nn_velocity(self.X, self.batch_size)
@@ -189,14 +185,6 @@ class NavierStokeSolver(object):
         V = self.session.run(self.model_velocity_int, feed_dict={self.X: vis_points})
         V = V.reshape((len(Y), len(X), 2))
         vis_points = vis_points.reshape((len(Y), len(X), 2))
-        # u_true = self.exact_solution(vis_points)
-
-        # plt.clf()
-        # fig = plt.figure()
-        # plt.quiver(*vis_points.T, V[:,0], V[:,1], color=['r','b','g'], scale=21)
-        # # plt.show()
-        # fig.savefig(save_path)
-
         plt.clf()
         fig = plt.figure()
         # Varying color along a streamline
