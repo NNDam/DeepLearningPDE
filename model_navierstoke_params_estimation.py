@@ -66,19 +66,7 @@ def plot_solution(X_star, u_star, index, save_path = None):
         plt.savefig(save_path)
 
 class NavierStokeEstimator(object):
-    '''
-        Template of DeepLearning PDE models with specific inner & boundary model
-    '''
     def __init__(self, d = 2, hidden_layers = [256]):
-        '''
-            Init template with default config
-                delta(u) = f
-                u|dO = g_D
-            -> solver u:= Boundary(x, y, w1) + B(x, y).PDE(x, y, w2) 
-                            Boundary: boundary deep learning model (Boundary = g_D in dD)
-                            B: = 0 in dO
-                            PDE: PDE deep learning model
-        '''
         # Config
         self.dimension   = d
         self.learning_rate  = tf.placeholder(tf.float64)
